@@ -14,6 +14,16 @@ const budgetController = (function () {
     this.value = value;
   };
 
+  // Calculate totals of income and expense in allItems array
+  const calculateTotal = function (type) {
+    let sum = 0;
+    // Grab totals for exp or inc and add user input
+    data.allItems[type].forEach(function (cur) {
+      sum += cur.value;
+    });
+    data.totals[type] = sum;
+  };
+
   // Object of all user data
   const data = {
     // create array of objects created by constructors
@@ -25,7 +35,12 @@ const budgetController = (function () {
     totals: {
       exp: 0,
       inc: 0
-    }
+    },
+    // total budget
+    budget: 0,
+    // expense %
+    percentage: -1
+
   };
 
   return {
@@ -51,7 +66,41 @@ const budgetController = (function () {
       data.allItems[type].push(newItem);
       // Return newItem as public
       return newItem;
+
+
     },
+
+    // Total Income and Total Expenses with %
+    calculateBudget: function () {
+
+      // 1. Calculate total income and expenses
+      calculateTotal('exp');
+      calculateTotal('inc');
+
+      // 2. Calculate the: budget = income - expenses
+      data.budget = data.totals.inc - data.totals.exp;
+
+      // 3. Calculate the % of income spent: % =  expense/income
+      // Check for divided by 0 situation
+      if (data.totals.inc > 0) {
+        data.percentage = Math.round((data.totals.exp / data.totals.inc) * 100);
+      } else {
+        data.percentage = -1;
+      }
+
+    },
+
+    // Returns Budget totals and %
+    getBudget: function () {
+      return {
+        budget: data.budget,
+        totalInc: data.totals.inc,
+        totalExp: data.totals.exp,
+        percentage: data.percentage
+      }
+    },
+
+    // test function to be deleted (TRASH)
     testing: function () {
       console.log(data);
     }
@@ -68,7 +117,12 @@ const UIController = (function () {
     inputValue: ".add__value",
     inputBtn: ".add__btn",
     incomeContainer: ".income__list",
-    expenseContainer: ".expenses__list"
+    expenseContainer: ".expenses__list",
+    budgetLabel: ".budget__value",
+    incomeLabel: ".budget__income--value",
+    expensesLabel: ".budget__expenses--value",
+    percentageLabel: ".budget__expenses--percentage"
+
   };
 
   // Output user input (data must be public so other modules can utilize it)
@@ -79,7 +133,7 @@ const UIController = (function () {
         // Grab user data
         type: document.querySelector(DOMstrings.inputType).value, // inc or exp
         description: document.querySelector(DOMstrings.inputDescription).value, //description
-        value: document.querySelector(DOMstrings.inputValue).value // $ value
+        value: parseFloat(document.querySelector(DOMstrings.inputValue).value) // $ value
       };
     },
 
@@ -113,10 +167,40 @@ const UIController = (function () {
       document.querySelector(element).insertAdjacentHTML('beforeend', newHtml)
     },
 
+    // Clear input fields and move focus back to description
+    clearFields: function () {
+      // Grab user input fields using querySelectorAll -> nodelist
+      const fields = document.querySelectorAll(DOMstrings.inputDescription + ', ' + DOMstrings.inputValue);
+      // Convert fields nodelist into an array
+      const fieldsArr = Array.prototype.slice.call(fields);
+      // Loop through and set current value to an empty stirng
+      fieldsArr.forEach(function (current, index, array) {
+        current.value = "";
+      });
+      // Move the focus back to description input field after clear
+      fieldsArr[0].focus();
+    },
+
+    // Display budget inc, exp, and % totals 
+    displayBudget: function (obj) {
+      document.querySelector(DOMstrings.budgetLabel).textContent = obj.budget;
+      document.querySelector(DOMstrings.incomeLabel).textContent = obj.totalInc;
+      document.querySelector(DOMstrings.expensesLabel).textContent = obj.totalExp;
+      document.querySelector(DOMstrings.percentageLabel).textContent = obj.percentage;
+
+      // Account for -1 %
+      if (obj.percentage > 0) {
+        document.querySelector(DOMstrings.percentageLabel).textContent = obj.percentage + '%';
+      } else {
+        document.querySelector(DOMstrings.percentageLabel).textContent = "---";
+      }
+    },
+
     // Make DOMstrings public so other modules can use UI classes
     getDOMstrings: function () {
       return DOMstrings;
-    }
+    },
+
   };
 })();
 
@@ -136,25 +220,58 @@ const controller = (function (budgetCtrl, UICtrl) {
     });
   };
 
+  // Create a function to update the budget
+  const updateBudget = function () {
+
+    // 1. Calculate budget 
+    budgetController.calculateBudget();
+
+    // 2. Return the budget
+    const budget = budgetController.getBudget();
+
+    // 3. Display the budget back to UI
+    UICtrl.displayBudget(budget);
+  };
+
   // Main function to add a new item
   const ctrlAddItem = function () {
-    let input, newItem;
 
     // 1. Grab input data by calling function calling UIController
-    input = UICtrl.getInput();
+    const input = UICtrl.getInput();
 
-    // 2. Add data to budget controller
-    newItem = budgetController.addItem(input.type, input.description, input.value);
-    // 3. Add data to UI
-    UICtrl.addListItem(newItem, input.type);
-    // 4. Calculate budget
+    // Run the following if there's user data inputed 
+    if (input.description !== "" && !isNaN(input.value) && input.value > 0) {
 
-    // 5. Display calculations back to UI
+      // 2. Add data to budget controller
+      const newItem = budgetController.addItem(input.type, input.description, input.value);
+
+      // 3. Add data to UI fields at the bottom
+      UICtrl.addListItem(newItem, input.type);
+
+      // 4. Clear the fields
+      UICtrl.clearFields();
+
+      // Calculate and update budget
+      updateBudget();
+    }
   };
 
   return {
     init: function () {
       console.log("Application started...");
+      // Set everything to 0
+      UICtrl.displayBudget({
+        budget: 0,
+        totalInc: 0,
+        totalExp: 0,
+        percentage: -1
+
+      });
+
+      // Clear out input and focus on description
+      UICtrl.clearFields();
+
+      // Sets up eventlisteners
       setupEventListeners();
     }
   };
