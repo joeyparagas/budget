@@ -121,7 +121,8 @@ const UIController = (function () {
     budgetLabel: ".budget__value",
     incomeLabel: ".budget__income--value",
     expensesLabel: ".budget__expenses--value",
-    percentageLabel: ".budget__expenses--percentage"
+    percentageLabel: ".budget__expenses--percentage",
+    container: ".container"
 
   };
 
@@ -147,7 +148,7 @@ const UIController = (function () {
         element = DOMstrings.incomeContainer;
 
         // html string to insert to index.html
-        html = `<div class="item clearfix" id="income-%id%"><div class="item__description">%description%</div><div class="right clearfix"><div class="item__value">%value%</div><div class="item__delete"><button class="item__delete--btn"><i class="ion-ios-close-outline"></i></button></div></div></div>`;
+        html = `<div class="item clearfix" id="inc-%id%"><div class="item__description">%description%</div><div class="right clearfix"><div class="item__value">%value%</div><div class="item__delete"><button class="item__delete--btn"><i class="ion-ios-close-outline"></i></button></div></div></div>`;
       } else if (type === 'exp') {
 
         // target expense class to insert into html
@@ -155,7 +156,7 @@ const UIController = (function () {
         element = DOMstrings.expenseContainer;
 
         // html string to insert to index.html
-        html = `<div class="item clearfix" id="expense-%id%"><div class="item__description">%description%</div><div class="right clearfix"><div class="item__value">%value%</div><div class="item__percentage">21%</div><div class="item__delete"><button class="item__delete--btn"><i class="ion-ios-close-outline"></i></button></div></div></div>`;
+        html = `<div class="item clearfix" id="exp-%id%"><div class="item__description">%description%</div><div class="right clearfix"><div class="item__value">%value%</div><div class="item__percentage">21%</div><div class="item__delete"><button class="item__delete--btn"><i class="ion-ios-close-outline"></i></button></div></div></div>`;
       }
 
       // Replace placeholder text with actual data using .replace string method
@@ -218,6 +219,10 @@ const controller = (function (budgetCtrl, UICtrl) {
         ctrlAddItem();
       }
     });
+
+    // Grab delete (x) buttons using event delegation
+    document.querySelector(DOM.container).addEventListener('click', ctrlDeleteItem);
+
   };
 
   // Create a function to update the budget
@@ -255,6 +260,27 @@ const controller = (function (budgetCtrl, UICtrl) {
       updateBudget();
     }
   };
+
+  // Function to delete item in DOM
+  const ctrlDeleteItem = function (event) {
+
+    // Grab the parent node of the close icon (x)
+    const itemID = event.target.parentNode.parentNode.parentNode.parentNode.id;
+    // Use .split on string itemID to extract the number and it's type
+    const splitID = itemID.split('-');
+    // Number of ID of element and type of element (exp or inc)
+    const type = splitID[0];
+    const ID = splitID[1];
+    console.log(type, ID);
+
+    // Check to see if itemID even exists. 
+    // If not then 
+    if (itemID) {
+      // 1. Delete item from data structure
+      // 2. Delete item from UI
+      // 3. Update and show the new budget
+    }
+  }
 
   return {
     init: function () {
